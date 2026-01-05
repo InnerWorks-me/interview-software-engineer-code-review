@@ -1,0 +1,15 @@
+[project]
+name = "python"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pytest>=9.0.2",
+    "structlog>=25.5.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
