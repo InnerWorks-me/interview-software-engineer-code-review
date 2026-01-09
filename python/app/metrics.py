@@ -13,7 +13,7 @@ class DB:
     def __init__(self):
         self.log = logger.bind(component="db")
 
-    def get_project_config(self, project_id: str) -> Dict[str, Any]:
+    async def get_project_config(self, project_id: str) -> Dict[str, Any]:
         # In reality, a DB query
         self.log.info("fetching project configuration", project_id=project_id)
         return {
@@ -24,7 +24,7 @@ class DB:
             "inference_timeout_ms": 200,
         }
 
-    def save_fingerprint(
+    async def save_fingerprint(
             self,
             request_id: str,
             project_id: str,
@@ -53,7 +53,7 @@ class Redis:
     def __init__(self):
         self.log = logger.bind(component="redis")
 
-    def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> Optional[str]:
         self.log.debug("get", key=key)
         return self.store.get(key)
 
@@ -62,7 +62,7 @@ class InferenceService:
     def __init__(self):
         self.log = logger.bind(component="inference")
 
-    def fingerprint(self, project_id: str, metrics: Dict[str, Any], timeout_ms: int) -> Dict[str, Any]:
+    async def fingerprint(self, project_id: str, metrics: Dict[str, Any], timeout_ms: int) -> Dict[str, Any]:
         """
         Returns {"fingerprint_id": "..."} on success.
         Sometimes fails (timeout, 5xx).
@@ -76,7 +76,7 @@ class DataQueueingService:
     def __init__(self):
         self.log = logger.bind(component="dqs")
     
-    def upload(self, project_id: str, upload_data: dict[str, Any]) -> None:
+    async def upload(self, project_id: str, upload_data: dict[str, Any]) -> None:
         """
         Pushes arbitray data attached to a project_id to downstream services which
         store and index it. 
@@ -91,7 +91,7 @@ redis = Redis()
 inference = InferenceService()
 dqs = DataQueueingService()
 
-def ingest_metrics(request_body: str) -> Dict[str, Any]:
+async def ingest_metrics(request_body: str) -> Dict[str, Any]:
     """
     Ingest metrics.
     
@@ -118,3 +118,4 @@ def ingest_metrics(request_body: str) -> Dict[str, Any]:
     log = logger.bind(component="metrics_ingestion", request_id=request_id, received_at=received_at)
 
     raise NotImplementedError()
+
