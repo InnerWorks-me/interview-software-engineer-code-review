@@ -93,9 +93,81 @@ class DataQueueingService {
  */
 export default async function ingestMetrics(requestBody: string): Promise<Record<string, any>> {
     const db = new Database()
-    const cache = new Redis()
+    const redis = new Redis<string>()
     const inferenceService = new InferenceService()
     const dqs = new DataQueueingService()
 
-    throw new Error("not implemented")
+    const requestId = uuidv4()
+    const receivedAt = Date.now()
+
+    // Parse request
+    const body = JSON.parse(requestBody)
+    const projectId = body["project_id"]
+    const metrics = body["metrics"]
+    const traceId = body["trace_id"]
+    
+    // Load config
+    const cfg = await db.getProjectConfiguration(projectId)
+    if (!cfg.enabled) {
+        return { status: 403, error: "disabled" }
+    }
+
+    // Fetch the context from Redis
+    let rawData = await redis.get(traceId)
+    if (rawData === null) {
+        await new Promise((r) => setTimeout(r, cfg.contextWaitMs))
+        rawData = await redis.get(traceId)
+    }
+    const context = JSON.parse(rawData || "{}")
+
+    // Call the fingerprinting service
+    let fingerprintId: string;
+    try {
+        const resp = await inferenceService.fingerprint(projectId, {
+            context,
+            metrics,
+        }, cfg.inferenceTimeoutMs)
+        fingerprintId = resp["fingerprintId"]
+    } catch (err) {
+        console.error("failed to call inference service")
+        return {
+            status: 200,
+            request_id: requestId,
+            error: "inference failed"
+        }
+    }
+
+    // Persist fingerprint
+    try {
+        await db.saveFingerprint(projectId, requestId, {
+            fingerprintId,
+            data: {
+                metrics,
+                context,
+            },
+            createdAt: receivedAt
+        })
+    } catch (_) {
+        console.error("failed to save fingerprint")
+    }
+
+    const payload = {
+        requestId,
+        projectId,
+        receivedAt,
+        traceId,
+        fingerprintId,
+        metrics,
+        context,
+    }
+
+    await dqs.upload(projectId, payload);
+
+    console.info("metrics ingestion complete")
+    return {
+        status: 200,
+        project_id: projectId,
+        request_id: requestId,
+        fingerprint_id: fingerprintId,
+    }
 }
