@@ -30,6 +30,7 @@ class DB:
             project_id: str,
             fingerprint_id: str,
             metrics: dict[str, Any],
+            context: dict[str, Any],
             created_at: int
         ) -> None:
         """
@@ -62,7 +63,7 @@ class InferenceService:
     def __init__(self):
         self.log = logger.bind(component="inference")
 
-    async def fingerprint(self, project_id: str, metrics: Dict[str, Any], timeout_ms: int) -> Dict[str, Any]:
+    async def fingerprint(self, project_id: str, metrics: dict[str, Any], context: dict[str, Any], timeout_ms: int) -> Dict[str, Any]:
         """
         Returns {"fingerprint_id": "..."} on success.
         Sometimes fails (timeout, 5xx).
