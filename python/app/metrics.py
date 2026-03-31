@@ -9,6 +9,7 @@ logger = structlog.get_logger()
 
 # --- Fake dependencies (pretend these are real clients, and assume they are correctly implemented) ---
 
+
 class DB:
     def __init__(self):
         self.log = logger.bind(component="db")
@@ -25,14 +26,14 @@ class DB:
         }
 
     async def save_fingerprint(
-            self,
-            request_id: str,
-            project_id: str,
-            fingerprint_id: str,
-            metrics: dict[str, Any],
-            context: dict[str, Any],
-            created_at: int
-        ) -> None:
+        self,
+        request_id: str,
+        project_id: str,
+        fingerprint_id: str,
+        metrics: dict[str, Any],
+        context: dict[str, Any],
+        created_at: int,
+    ) -> None:
         """
         Saves fingerprint result for request_id.
         Can fail due to transient DB errors.
@@ -63,7 +64,13 @@ class InferenceService:
     def __init__(self):
         self.log = logger.bind(component="inference")
 
-    async def fingerprint(self, project_id: str, metrics: dict[str, Any], context: dict[str, Any], timeout_ms: int) -> Dict[str, Any]:
+    async def fingerprint(
+        self,
+        project_id: str,
+        metrics: dict[str, Any],
+        context: dict[str, Any],
+        timeout_ms: int,
+    ) -> Dict[str, Any]:
         """
         Returns {"fingerprint_id": "..."} on success.
         Sometimes fails (timeout, 5xx).
@@ -72,19 +79,19 @@ class InferenceService:
         fp = "fp_" + project_id
         self.log.info("fingerprint_success", project_id=project_id, fingerprint_id=fp)
         return {"fingerprint_id": fp}
-    
+
+
 class DataQueueingService:
     def __init__(self):
         self.log = logger.bind(component="dqs")
-    
+
     async def upload(self, project_id: str, upload_data: dict[str, Any]) -> None:
         """
         Pushes arbitray data attached to a project_id to downstream services which
-        store and index it. 
-        This mechanism is backed by a queue. If the queue is unavailable this will raise an exception.      
+        store and index it.
+        This mechanism is backed by a queue. If the queue is unavailable this will raise an exception.
         """
         # no-op
-
 
 
 db = DB()
@@ -92,14 +99,15 @@ redis = Redis()
 inference = InferenceService()
 dqs = DataQueueingService()
 
+
 async def ingest_metrics(request_body: str) -> Dict[str, Any]:
     """
     Ingest metrics.
-    
-    request_body is a string containing JSON. It should have a `project_id` and a large blob of 
+
+    request_body is a string containing JSON. It should have a `project_id` and a large blob of
     data under the `metrics` key.
 
-    This function will be called by a webapp endpoint. 
+    This function will be called by a webapp endpoint.
 
     The steps for metrics ingestion are:
     1. Fetch the project configuration to check if ingestion is enabled.
@@ -108,7 +116,7 @@ async def ingest_metrics(request_body: str) -> Dict[str, Any]:
     3. Compute the fingerprint using the fingerprinting service.
     4. Persist metrics and the fingerprint response to the database.
     5. Upload the data to a downstream data queueing service.
-    6. Return a request_id to the caller. 
+    6. Return a request_id to the caller.
 
     CRITICAL: The request_id must only be returned if the result was successfully saved to the DB.
     """
@@ -116,7 +124,8 @@ async def ingest_metrics(request_body: str) -> Dict[str, Any]:
     request_id = str(uuid.uuid4())
     received_at = int(time.time())
 
-    log = logger.bind(component="metrics_ingestion", request_id=request_id, received_at=received_at)
+    log = logger.bind(
+        component="metrics_ingestion", request_id=request_id, received_at=received_at
+    )
 
     raise NotImplementedError()
-
