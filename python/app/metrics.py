@@ -127,6 +127,9 @@ async def ingest_metrics(request_body: str) -> Dict[str, Any]:
     log = logger.bind(
         component="metrics_ingestion", request_id=request_id, received_at=received_at
     )
+    log = logger.bind(
+        component="metrics_ingestion", request_id=request_id, received_at=received_at
+    )
 
     # Parse request
     body = json.loads(request_body)
